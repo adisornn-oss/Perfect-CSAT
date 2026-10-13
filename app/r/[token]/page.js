@@ -12,7 +12,9 @@ function Shell({ product, children }) {
   return (
     <main className="sv" style={product ? { '--pc': product.color } : undefined}>
       <div className="sv-card">{children}</div>
-      <div className="sv-foot">ขับเคลื่อนโดย Perfect CSAT</div>
+      <div className="sv-foot">
+        <img src="/brand-mark.jpg" alt="" style={{ mixBlendMode: 'multiply' }} /> ขับเคลื่อนโดย Perfect CSAT
+      </div>
     </main>
   );
 }

@@ -18,8 +18,8 @@ export default async function Login({ searchParams }) {
   return (
     <div className="center-page">
       <div className="login">
-        <div className="logo" style={{ justifyContent: 'center', fontSize: 22, marginBottom: 6 }}>
-          <span className="logo-mark" style={{ width: 36, height: 36, fontSize: 19 }}>★</span> Perfect CSAT
+        <div style={{ textAlign: 'center', marginBottom: 10 }}>
+          <img src="/brand-logo.jpg" alt="Perfect CSAT" width={150} height={163} style={{ mixBlendMode: 'multiply' }} />
         </div>
         <p className="muted small" style={{ textAlign: 'center', marginTop: 0 }}>ระบบประเมินความพึงพอใจลูกค้ารายเคส · BoostSMS · EasyCRM</p>
         <LoginForm google={Boolean(process.env.GOOGLE_CLIENT_ID)} error={ERR[searchParams?.e] || ''} />

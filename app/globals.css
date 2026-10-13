@@ -5,9 +5,9 @@
   --ink-2: #4a5068;
   --ink-3: #8a90a6;
   --line: #e4e7ef;
-  --brand: #2f5bea;
+  --brand: #d81b72;
   --brand-ink: #ffffff;
-  --brand-soft: #eef2ff;
+  --brand-soft: #fdebf3;
   --good: #12a150;
   --good-soft: #e7f7ee;
   --warn: #c77700;
@@ -66,7 +66,7 @@ h3 { font-size: 15px; font-weight: 600; }
 .input, select.input, textarea.input {
   width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; background: #fff; outline: none;
 }
-.input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(47, 91, 234, 0.15); }
+.input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(216, 27, 114, 0.15); }
 textarea.input { resize: vertical; min-height: 80px; }
 label.field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--ink-2); font-weight: 500; }
 
@@ -94,7 +94,7 @@ label.field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; 
 .alert.warn { background: var(--warn-soft); color: #7a4a00; }
 .alert.bad { background: var(--bad-soft); color: #8f1f1f; }
 .alert.good { background: var(--good-soft); color: #0b6634; }
-.alert.info { background: var(--brand-soft); color: #23409f; }
+.alert.info { background: var(--brand-soft); color: #8f1049; }
 
 table.t { width: 100%; border-collapse: collapse; font-size: 14px; }
 table.t th { text-align: left; font-weight: 500; color: var(--ink-3); font-size: 12px; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
@@ -111,10 +111,8 @@ table.t td.r, table.t th.r { text-align: right; }
 .topbar-in { max-width: 1240px; margin: 0 auto; padding: 0 20px; height: 58px; display: flex; align-items: center; gap: 18px; }
 .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; color: var(--ink); }
 .logo:hover { text-decoration: none; }
-.logo-mark {
-  width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #2f5bea, #7b5cff);
-  display: grid; place-items: center; color: #fff; font-size: 15px;
-}
+.logo-mark { width: 28px; height: 28px; object-fit: contain; display: block; }
+.logo b { color: #e8408f; }
 .nav { display: flex; gap: 2px; flex: 1; overflow-x: auto; }
 .nav a { padding: 7px 12px; border-radius: 9px; color: var(--ink-2); font-weight: 500; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
 .nav a:hover { background: #f1f3f8; text-decoration: none; }
@@ -199,7 +197,8 @@ table.t td.r, table.t th.r { text-align: right; }
 .chips button.on { border-color: var(--pc, var(--brand)); background: var(--pc, var(--brand)); color: #fff; }
 .sv-submit { margin-top: 22px; }
 .sv-submit .btn.primary { background: var(--pc, var(--brand)); border-color: var(--pc, var(--brand)); }
-.sv-foot { margin-top: 16px; text-align: center; font-size: 12px; color: var(--ink-3); max-width: 480px; }
+.sv-foot { margin-top: 16px; text-align: center; font-size: 12px; color: var(--ink-3); max-width: 480px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.sv-foot img { width: 16px; height: 16px; object-fit: contain; }
 .sv-pdpa { font-size: 12px; color: var(--ink-3); margin-top: 16px; line-height: 1.5; }
 .sv-done { text-align: center; padding: 34px 22px 30px; }
 .sv-done .ic { font-size: 46px; }

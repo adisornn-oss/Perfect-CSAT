@@ -117,7 +117,7 @@ export default function Shell({ user, children }) {
       <header className="topbar">
         <div className="topbar-in">
           <a className="logo" href="/">
-            <span className="logo-mark">★</span> Perfect CSAT
+            <img className="logo-mark" src="/brand-mark.jpg" alt="" /> Perfect <b>CSAT</b>
           </a>
           <nav className="nav">
             {links.map((l) => (
