@@ -22,7 +22,7 @@ export default async function Login({ searchParams }) {
       <div className="auth-box">
         <img src="/brand-logo.jpg" alt="Perfect CSAT" width={92} height={100} style={{ mixBlendMode: 'multiply', display: 'block', marginBottom: 22 }} />
         <h1>เข้าสู่ระบบ</h1>
-        <p className="soft small" style={{ margin: '4px 0 22px' }}>สำหรับทีม Customer Support ของ BoostSMS และ EasyCRM</p>
+        <p className="soft small" style={{ margin: '4px 0 22px' }}>สำหรับทีม Customer Support · Thunder Solution · EasySlip · BoostSMS · EasyCRM</p>
         <LoginForm
           google={Boolean(process.env.GOOGLE_CLIENT_ID)}
           email={Boolean(process.env.RESEND_API_KEY)}

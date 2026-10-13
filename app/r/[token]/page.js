@@ -41,6 +41,12 @@ function Head({ product, c }) {
       {product?.logo ? <img src={product.logo} alt={product.name} /> : <b style={{ color: product?.color }}>{product?.name}</b>}
       {c && (
         <div className="meta">
+          {product?.brand && product.brand !== product.name && (
+            <>
+              <b>{product.name}</b>
+              <br />
+            </>
+          )}
           เคส <b className="mono">{c.no}</b>
           <br />
           ดูแลโดย <b>{c.agentNick}</b>

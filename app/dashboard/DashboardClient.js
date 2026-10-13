@@ -272,7 +272,7 @@ export default function DashboardClient({ user }) {
   if (!d) return <div className="empty">กำลังโหลด…</div>;
   const s = d.settings;
   const k = d.kpi;
-  const pLabel = product ? ` (${d.products.find((p) => p.code === product)?.name})` : '';
+  const pLabel = product ? ` (${product.startsWith('brand:') ? product.slice(6) : d.products.find((p) => p.code === product)?.name})` : '';
   const kpiText = d.kpiSheet
     .map(
       (m) =>
@@ -286,7 +286,7 @@ export default function DashboardClient({ user }) {
       <div className="pagehead">
         <div>
           <h1>ภาพรวม CSAT</h1>
-          <div className="sub">{isLead ? 'BoostSMS + EasyCRM ทั้งทีม' : 'เฉพาะเคสของคุณ'} · เวลาไทย</div>
+          <div className="sub">{isLead ? 'ทุกผลิตภัณฑ์ ทั้งทีม' : 'เฉพาะเคสของคุณ'} · เวลาไทย</div>
         </div>
         {isLead && (
           <div className="row">
@@ -314,7 +314,16 @@ export default function DashboardClient({ user }) {
         )}
         <select className="input" value={product} onChange={(e) => setProduct(e.target.value)}>
           <option value="">ทุกผลิตภัณฑ์</option>
-          {d.products.map((p) => <option key={p.code} value={p.code}>{p.name}</option>)}
+          {[...new Set(d.products.map((p) => p.brand))].map((b) => {
+            const items = d.products.filter((p) => p.brand === b);
+            if (items.length === 1) return <option key={b} value={items[0].code}>{items[0].name}</option>;
+            return (
+              <optgroup key={b} label={b}>
+                <option value={`brand:${b}`}>{b} ทั้งหมด</option>
+                {items.map((p) => <option key={p.code} value={p.code}>{p.name}</option>)}
+              </optgroup>
+            );
+          })}
         </select>
         {isLead && (
           <select className="input" value={agent} onChange={(e) => setAgent(e.target.value)}>
@@ -410,7 +419,10 @@ export default function DashboardClient({ user }) {
         {isLead && <p className="xs muted" style={{ margin: '8px 2px 0' }}>คนที่มีผู้ตอบน้อยกว่า {s.minAgentSample} คนจะมีป้าย “ตัวอย่างน้อย” — ยังไม่ควรใช้ตัวเลขนี้ประเมินผลงาน</p>}
       </div>
       <div className="cols section" style={{ marginTop: 16 }}>
+        <BreakdownTable title="แยกตามแบรนด์" rows={d.byBrand} s={s} />
         <BreakdownTable title="แยกตามผลิตภัณฑ์" rows={d.byProduct} s={s} />
+      </div>
+      <div className="section" style={{ marginTop: 16 }}>
         <BreakdownTable title="แยกตามช่องทาง" rows={d.byChannel} s={s} />
       </div>
 

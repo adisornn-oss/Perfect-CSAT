@@ -124,7 +124,7 @@ function Users({ d, run, say }) {
 }
 
 function Products({ d, run }) {
-  const blank = { code: '', name: '', color: '#1E6FF0', logo: '', contact: '', active: true };
+  const blank = { code: '', name: '', brand: '', color: '#1E6FF0', logo: '', contact: '', active: true };
   const [f, setF] = useState(blank);
   return (
     <div className="stack">
@@ -135,6 +135,7 @@ function Products({ d, run }) {
               <div className="row">
                 {p.logo && <img src={p.logo} alt="" style={{ height: 28 }} />}
                 <b>{p.name}</b> <span className="tag mono">{p.code}</span>
+                {p.brand && p.brand !== p.name && <span className="xs muted">{p.brand}</span>}
                 {p.active === false && <span className="st red">ปิดใช้งาน</span>}
               </div>
               <button className="btn sm" onClick={() => setF(p)}>แก้ไข</button>
@@ -147,7 +148,8 @@ function Products({ d, run }) {
         <h2>{d.products.some((p) => p.code === f.code) ? `แก้ไข ${f.code}` : 'เพิ่มผลิตภัณฑ์'}</h2>
         <div className="row" style={{ alignItems: 'flex-end', gap: 10 }}>
           <label className="field">รหัส (2–4 ตัว ใช้ในเลขเคส)<input className="input mono" value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} maxLength={4} /></label>
-          <label className="field">ชื่อ<input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
+          <label className="field">ชื่อผลิตภัณฑ์<input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Thunder Bot" /></label>
+          <label className="field">แบรนด์ / บริษัท<input className="input" value={f.brand || ''} onChange={(e) => setF({ ...f, brand: e.target.value })} placeholder="Thunder Solution" /></label>
           <label className="field">สีแบรนด์<input className="input" type="color" style={{ width: 70, padding: 4 }} value={f.color} onChange={(e) => setF({ ...f, color: e.target.value })} /></label>
           <label className="field" style={{ flex: 1 }}>URL โลโก้<input className="input" value={f.logo} onChange={(e) => setF({ ...f, logo: e.target.value })} placeholder="/logos/bs.png หรือ https://…" /></label>
         </div>

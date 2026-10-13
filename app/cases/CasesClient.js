@@ -125,10 +125,11 @@ export default function CasesClient({ user }) {
           )}
           <div className="field">
             ผลิตภัณฑ์
-            <div className="seg">
+            <div className="choices">
               {products.map((p) => (
-                <button type="button" key={p.code} className={product === p.code ? 'on' : ''} onClick={() => setProduct(p.code)} disabled={Boolean(parentCase)}>
-                  {p.name}
+                <button type="button" key={p.code} className={product === p.code ? 'on' : ''} onClick={() => setProduct(p.code)} disabled={Boolean(parentCase) && product !== p.code}>
+                  <b>{p.name}</b>
+                  <span>{p.brand && p.brand !== p.name ? p.brand : '\u00a0'}</span>
                 </button>
               ))}
             </div>
