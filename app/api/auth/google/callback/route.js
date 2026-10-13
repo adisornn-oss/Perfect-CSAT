@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { appUrl } from '@/lib/notify';
 import { hmac, safeEqual } from '@/lib/ids';
-import { ensureSeed, getUserByEmail, audit } from '@/lib/data';
+import { ensureSeed, getUserByEmail, audit, autoProvision, touchLogin } from '@/lib/data';
 import { sessionCookie } from '@/lib/auth';
 
 export async function GET(req) {
@@ -27,8 +27,10 @@ export async function GET(req) {
   const claims = JSON.parse(Buffer.from(String(idt).split('.')[1] || '', 'base64url').toString('utf8') || '{}');
   if (!claims.email_verified) return fail('google');
   await ensureSeed();
-  const u = await getUserByEmail(claims.email);
-  if (!u || u.active === false) return fail('nouser');
+  let u = await getUserByEmail(claims.email);
+  if (!u) u = await autoProvision(claims); // same-domain staff join automatically
+  if (!u || u.active === false) return fail(u ? 'disabled' : 'nouser');
+  await touchLogin(u, claims);
   await audit(u, 'auth.login', { via: 'google' });
   const res = NextResponse.redirect(new URL('/cases', appUrl(req)));
   res.cookies.set(sessionCookie(u.id));

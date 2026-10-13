@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { api, useToast } from '@/components/Shell';
+import { api, useToast, copyText, Avatar } from '@/components/Shell';
 
 const ROLE = { agent: 'CS Agent', lead: 'CS Lead', admin: 'Admin' };
 const TH_M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -8,51 +8,110 @@ const mLabel = (m) => `${TH_M[Number(m.slice(5)) - 1]} ${m.slice(0, 4)}`;
 const fmt = (iso) =>
   iso ? new Date(iso).toLocaleString('th-TH-u-ca-gregory', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
 
-function Users({ d, run }) {
-  const [f, setF] = useState({ email: '', name: '', nickname: '', role: 'agent', password: '' });
-  const [reset, setReset] = useState({});
+function Users({ d, run, say }) {
+  const [emails, setEmails] = useState('');
+  const [role, setRole] = useState('agent');
+  const [invites, setInvites] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const count = emails.split(/[\s,;]+/).filter((x) => x.includes('@')).length;
+
+  async function add() {
+    setBusy(true);
+    try {
+      const j = await api('/api/admin', { method: 'POST', body: { action: 'users.add', emails, role } });
+      setInvites(j);
+      setEmails('');
+      await run(null);
+    } catch (e) {
+      say(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function linkFor(u) {
+    const j = await api('/api/admin', { method: 'POST', body: { action: 'user.link', id: u.id } });
+    if (await copyText(j.link)) say(`คัดลอกลิงก์ของ ${u.nickname || u.email} แล้ว`);
+  }
+
   return (
-    <div className="stack">
-      <div className="card pad stack">
-        <h2>เพิ่มผู้ใช้</h2>
-        <div className="filters">
-          <label className="field grow">อีเมล (ใช้ล็อกอิน / Google SSO)<input className="input" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} placeholder="name@thunder.in.th" /></label>
-          <label className="field">ชื่อ-นามสกุล<input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
-          <label className="field">ชื่อเล่น (แสดงให้ลูกค้าเห็น)<input className="input" value={f.nickname} onChange={(e) => setF({ ...f, nickname: e.target.value })} /></label>
-          <label className="field">บทบาท
-            <select className="input" value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}>
-              {Object.entries(ROLE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
-          </label>
-          <label className="field">รหัสผ่านเริ่มต้น (≥ 8 ตัว)<input className="input" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} placeholder="เว้นว่างถ้าใช้ Google" /></label>
-          <button className="btn primary" onClick={() => run({ action: 'user.create', ...f }, 'เพิ่มผู้ใช้แล้ว').then((ok) => ok && setF({ email: '', name: '', nickname: '', role: 'agent', password: '' }))}>เพิ่ม</button>
-        </div>
+    <div className="stack" style={{ gap: 20 }}>
+      <div className="note-line">
+        {d.googleEnabled ? (
+          <>พนักงาน <b>@{d.settings.autoJoinDomain}</b> เข้าด้วย Google ได้เลย ระบบสร้างบัญชีเป็น {ROLE[d.settings.autoJoinRole]} ให้อัตโนมัติ และดึงชื่อจาก Google มาใช้ — Admin แค่ปรับบทบาทหัวหน้าทีม</>
+        ) : (
+          <>ยังไม่ได้เชื่อม Google — เพิ่มอีเมลด้านล่างแล้วส่งลิงก์เข้าสู่ระบบให้แต่ละคน (คลิกเดียว ไม่ต้องตั้งรหัสผ่าน)</>
+        )}
       </div>
-      <div className="card tablewrap">
+
+      <div className="panel panel-b stack" style={{ gap: 10 }}>
+        <h2>เพิ่มคนเข้าทีม</h2>
+        <textarea className="input" rows={3} value={emails} onChange={(e) => setEmails(e.target.value)} placeholder={`วางอีเมลได้หลายรายการ คั่นด้วยบรรทัดใหม่หรือจุลภาค\nเช่น somchai.k@${d.settings.autoJoinDomain || 'thunder.in.th'}`} />
+        <div className="spread">
+          <div className="seg">
+            {Object.entries(ROLE).map(([k, v]) => <button key={k} className={role === k ? 'on' : ''} onClick={() => setRole(k)}>{v}</button>)}
+          </div>
+          <button className="btn primary" disabled={!count || busy} onClick={add}>{busy ? 'กำลังเพิ่ม…' : count > 1 ? `เพิ่ม ${count} คน` : 'เพิ่ม'}</button>
+        </div>
+        <div className="xs muted">ชื่อและชื่อเล่นจะถูกเติมจากบัญชี Google ตอนเข้าใช้ครั้งแรก ไม่ต้องกรอก</div>
+      </div>
+
+      {invites && (invites.invites.length > 0 || invites.skipped.length > 0) && (
+        <div className="panel">
+          <div className="panel-h">
+            <h2>ลิงก์เข้าสู่ระบบ</h2>
+            {invites.invites.length > 0 && (
+              <button className="btn sm" onClick={async () => (await copyText(invites.invites.map((x) => `${x.email}\n${x.link}`).join('\n\n'))) && say('คัดลอกทั้งหมดแล้ว')}>คัดลอกทั้งหมด</button>
+            )}
+          </div>
+          <div className="tablewrap">
+            <table className="t">
+              <tbody>
+                {invites.invites.map((x) => (
+                  <tr key={x.email}>
+                    <td>{x.email}</td>
+                    <td className="xs muted">{x.mailed ? 'ส่งอีเมลให้แล้ว' : 'ส่งลิงก์นี้ให้ทางแชต · ใช้ได้ 1 ครั้งใน 7 วัน'}</td>
+                    <td className="r"><button className="btn sm" onClick={async () => (await copyText(x.link)) && say('คัดลอกลิงก์แล้ว')}>คัดลอกลิงก์</button></td>
+                  </tr>
+                ))}
+                {invites.skipped.map((x) => (
+                  <tr key={x.email}><td className="muted">{x.email}</td><td className="xs muted" colSpan={2}>ข้าม — {x.reason}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <div className="panel tablewrap">
         <table className="t">
-          <thead><tr><th>ชื่อ</th><th>ชื่อเล่น</th><th>อีเมล</th><th>บทบาท</th><th>สถานะ</th><th>รีเซ็ตรหัสผ่าน</th></tr></thead>
+          <thead><tr><th>คน</th><th>ชื่อที่ลูกค้าเห็น</th><th>บทบาท</th><th>เข้าใช้ล่าสุด</th><th /></tr></thead>
           <tbody>
             {d.users.map((u) => (
-              <tr key={u.id}>
-                <td>{u.name}</td>
+              <tr key={u.id} style={u.active === false ? { opacity: 0.5 } : undefined}>
                 <td>
-                  <input className="input" style={{ width: 120 }} defaultValue={u.nickname} onBlur={(e) => e.target.value !== u.nickname && run({ action: 'user.update', id: u.id, nickname: e.target.value }, 'บันทึกแล้ว')} />
+                  <div className="row" style={{ flexWrap: 'nowrap', gap: 10 }}>
+                    <Avatar user={u} />
+                    <div style={{ lineHeight: 1.3 }}>
+                      <div>{u.name}{u.autoName && <span className="xs muted"> · รอเข้าใช้ครั้งแรก</span>}</div>
+                      <div className="xs muted">{u.email}</div>
+                    </div>
+                  </div>
                 </td>
-                <td className="small">{u.email}</td>
                 <td>
-                  <select className="input" style={{ width: 120 }} value={u.role} onChange={(e) => run({ action: 'user.update', id: u.id, role: e.target.value }, 'เปลี่ยนบทบาทแล้ว')}>
+                  <input className="input" style={{ width: 130, height: 30 }} defaultValue={u.nickname} onBlur={(e) => e.target.value.trim() && e.target.value !== u.nickname && run({ action: 'user.update', id: u.id, nickname: e.target.value }, 'บันทึกแล้ว')} />
+                </td>
+                <td>
+                  <select className="input" style={{ width: 118, height: 30 }} value={u.role} onChange={(e) => run({ action: 'user.update', id: u.id, role: e.target.value }, 'เปลี่ยนบทบาทแล้ว')}>
                     {Object.entries(ROLE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </td>
-                <td>
-                  <button className={`btn sm ${u.active === false ? '' : 'ghost'}`} onClick={() => run({ action: 'user.update', id: u.id, active: u.active === false }, 'บันทึกแล้ว')}>
-                    {u.active === false ? <span className="badge red">ปิดใช้งาน</span> : <span className="badge green">ใช้งาน</span>}
-                  </button>
-                </td>
-                <td>
-                  <div className="row" style={{ flexWrap: 'nowrap' }}>
-                    <input className="input" style={{ width: 140 }} placeholder="รหัสใหม่" value={reset[u.id] || ''} onChange={(e) => setReset({ ...reset, [u.id]: e.target.value })} />
-                    <button className="btn sm" disabled={(reset[u.id] || '').length < 8} onClick={() => run({ action: 'user.update', id: u.id, password: reset[u.id] }, 'รีเซ็ตรหัสผ่านแล้ว').then(() => setReset({ ...reset, [u.id]: '' }))}>ตั้ง</button>
+                <td className="small soft">{u.lastLoginAt ? fmt(u.lastLoginAt) : <span className="muted">ยังไม่เคย</span>}</td>
+                <td className="r">
+                  <div className="row" style={{ justifyContent: 'flex-end', flexWrap: 'nowrap', gap: 4 }}>
+                    {u.active !== false && <button className="btn sm" onClick={() => linkFor(u)}>คัดลอกลิงก์เข้าระบบ</button>}
+                    <button className="btn sm quiet" onClick={() => run({ action: 'user.update', id: u.id, active: u.active === false }, u.active === false ? 'เปิดใช้งานแล้ว' : 'ปิดใช้งานแล้ว')}>
+                      {u.active === false ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -69,14 +128,14 @@ function Products({ d, run }) {
   const [f, setF] = useState(blank);
   return (
     <div className="stack">
-      <div className="grid2">
+      <div className="cols">
         {d.products.map((p) => (
-          <div key={p.code} className="card pad stack" style={{ borderTop: `4px solid ${p.color}` }}>
+          <div key={p.code} className="panel panel-b stack" style={{ borderTop: `4px solid ${p.color}` }}>
             <div className="spread">
               <div className="row">
                 {p.logo && <img src={p.logo} alt="" style={{ height: 28 }} />}
-                <b>{p.name}</b> <span className="badge mono">{p.code}</span>
-                {p.active === false && <span className="badge red">ปิดใช้งาน</span>}
+                <b>{p.name}</b> <span className="tag mono">{p.code}</span>
+                {p.active === false && <span className="st red">ปิดใช้งาน</span>}
               </div>
               <button className="btn sm" onClick={() => setF(p)}>แก้ไข</button>
             </div>
@@ -84,13 +143,13 @@ function Products({ d, run }) {
           </div>
         ))}
       </div>
-      <div className="card pad stack">
+      <div className="panel panel-b stack">
         <h2>{d.products.some((p) => p.code === f.code) ? `แก้ไข ${f.code}` : 'เพิ่มผลิตภัณฑ์'}</h2>
-        <div className="filters">
+        <div className="row" style={{ alignItems: 'flex-end', gap: 10 }}>
           <label className="field">รหัส (2–4 ตัว ใช้ในเลขเคส)<input className="input mono" value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} maxLength={4} /></label>
           <label className="field">ชื่อ<input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
           <label className="field">สีแบรนด์<input className="input" type="color" style={{ width: 70, padding: 4 }} value={f.color} onChange={(e) => setF({ ...f, color: e.target.value })} /></label>
-          <label className="field grow">URL โลโก้<input className="input" value={f.logo} onChange={(e) => setF({ ...f, logo: e.target.value })} placeholder="/logos/bs.png หรือ https://…" /></label>
+          <label className="field" style={{ flex: 1 }}>URL โลโก้<input className="input" value={f.logo} onChange={(e) => setF({ ...f, logo: e.target.value })} placeholder="/logos/bs.png หรือ https://…" /></label>
         </div>
         <label className="field">ช่องทางติดต่อซัพพอร์ต<input className="input" value={f.contact} onChange={(e) => setF({ ...f, contact: e.target.value })} /></label>
         <div className="spread">
@@ -113,10 +172,10 @@ function Form({ d, run }) {
     <label className="field">{label}<input className="input" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></label>
   );
   return (
-    <div className="grid3" style={{ alignItems: 'start' }}>
-      <div className="card pad stack">
+    <div className="cols-21" style={{ alignItems: 'start' }}>
+      <div className="panel panel-b stack">
         <div className="spread"><h2>แบบประเมิน (เวอร์ชันปัจจุบัน v{cur.version})</h2></div>
-        <div className="alert info small">บันทึกแล้วระบบจะสร้างเวอร์ชันใหม่ คำตอบเก่ายังผูกกับเวอร์ชันเดิม ไม่ถูกกระทบ · สเกล 1–5 (แย่มาก → ดีมาก) และตัวเลือกการแก้ปัญหาเป็นค่าคงที่ตามนิยาม KPI</div>
+        <div className="note-line">บันทึกแล้วระบบจะสร้างเวอร์ชันใหม่ คำตอบเก่ายังผูกกับเวอร์ชันเดิม ไม่ถูกกระทบ · สเกล 1–5 (แย่มาก → ดีมาก) และตัวเลือกการแก้ปัญหาเป็นค่าคงที่ตามนิยาม KPI</div>
         {field('scoreQuestion', 'คำถามหลัก (คะแนน 1–5)')}
         {field('improveQuestion', 'คำถามเมื่อให้ 1–3')}
         <label className="field">ตัวเลือก "ควรปรับปรุง" (บรรทัดละ 1 ข้อ)<textarea className="input" rows={7} value={f.improveOptions} onChange={(e) => setF({ ...f, improveOptions: e.target.value })} /></label>
@@ -128,10 +187,10 @@ function Form({ d, run }) {
           <button className="btn primary" onClick={() => run({ action: 'form.save', ...f }, 'บันทึกเวอร์ชันใหม่แล้ว')}>บันทึกเป็นเวอร์ชันใหม่</button>
         </div>
       </div>
-      <div className="card pad">
+      <div className="panel panel-b">
         <h2 style={{ marginBottom: 8 }}>ประวัติเวอร์ชัน</h2>
         {d.forms.map((v) => (
-          <div className="note" key={v.version}>
+          <div className="log" key={v.version}>
             <b>v{v.version}</b> · {fmt(v.createdAt)} {v.createdBy ? `· ${v.createdBy}` : ''}
           </div>
         ))}
@@ -149,7 +208,7 @@ function Templates({ d, run }) {
   const [text, setText] = useState(effective);
   useEffect(() => setText(d.templates[key] ?? (prod !== '*' ? d.templates[`*|${ch}`] : undefined) ?? d.defaultTemplates[ch]), [key, d]);
   return (
-    <div className="card pad stack">
+    <div className="panel panel-b stack">
       <h2>เทมเพลตข้อความแนบลิงก์</h2>
       <div className="small muted">ตัวแปร: <code>{'{product}'}</code> ชื่อผลิตภัณฑ์ · <code>{'{agent}'}</code> ชื่อเล่นผู้ดูแล · <code>{'{case}'}</code> เลขเคส · <code>{'{link}'}</code> ลิงก์ · <code>{'{days}'}</code> อายุลิงก์ (วัน)</div>
       <div className="row">
@@ -172,18 +231,27 @@ function Settings({ d, run }) {
   const s = d.settings;
   const [f, setF] = useState({ ...s, holidays: (s.holidays || []).join(', '), alertEmails: (s.alertEmails || []).join(', ') });
   const num = (k, label, hint) => (
-    <label className="field">{label}<input className="input" type="number" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} />{hint && <span className="muted small" style={{ fontWeight: 400 }}>{hint}</span>}</label>
+    <label className="field">{label}<input className="input" type="number" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} />{hint && <span className="hint">{hint}</span>}</label>
   );
   return (
-    <div className="card pad stack">
-      <h2>เป้าหมายและการตั้งค่า</h2>
-      <div className="grid2">
+    <div className="panel panel-b stack">
+      <h2>เป้าหมายและเกณฑ์</h2>
+      <div className="cols">
         {num('csatTarget', 'เป้าหมาย CSAT (%)', 'ให้ตรงกับช่อง "เป้าหมาย" ในชีต KPI')}
         {num('responseRateTarget', 'เป้าหมายอัตราตอบกลับ (%)')}
         {num('sendRateTarget', 'เป้าหมายสัดส่วนเคสที่ส่งลิงก์ (%)')}
         {num('linkTtlDays', 'อายุลิงก์ (วัน)', 'มีผลกับลิงก์ที่สร้างใหม่')}
         {num('minSample', 'ผู้ตอบขั้นต่ำต่อเดือน (แสดงคำเตือน)')}
         {num('minAgentSample', 'ผู้ตอบขั้นต่ำต่อคน (ใช้ประเมินผลงาน)')}
+      </div>
+      <div className="cols">
+        <label className="field">โดเมนที่เข้าใช้ได้อัตโนมัติด้วย Google<input className="input" value={f.autoJoinDomain || ''} onChange={(e) => setF({ ...f, autoJoinDomain: e.target.value })} placeholder="thunder.in.th" /><span className="hint">เว้นว่าง = ต้องให้ Admin เพิ่มอีเมลก่อนทุกครั้ง</span></label>
+        <label className="field">บทบาทเริ่มต้นของคนที่เข้ามาเอง
+          <select className="input" value={f.autoJoinRole || 'agent'} onChange={(e) => setF({ ...f, autoJoinRole: e.target.value })}>
+            <option value="agent">CS Agent</option>
+            <option value="lead">CS Lead</option>
+          </select>
+        </label>
       </div>
       <label className="field">ลิงก์นโยบายความเป็นส่วนตัว (แสดงในหน้าประเมิน)<input className="input" value={f.privacyUrl} onChange={(e) => setF({ ...f, privacyUrl: e.target.value })} /></label>
       <label className="field">วันหยุดบริษัท (ไม่นับเป็นวันทำการ) รูปแบบ YYYY-MM-DD คั่นด้วยจุลภาค<textarea className="input" rows={2} value={f.holidays} onChange={(e) => setF({ ...f, holidays: e.target.value })} placeholder="2026-10-23, 2026-12-05, 2026-12-10, 2026-12-31" /></label>
@@ -197,7 +265,7 @@ function Settings({ d, run }) {
 
 function Closed({ d, run }) {
   return (
-    <div className="card pad stack">
+    <div className="panel panel-b stack">
       <h2>จำนวนเคสที่ปิดต่อเดือน</h2>
       <div className="small muted">ใช้คำนวณ "สัดส่วนเคสที่ส่งลิงก์ = ลิงก์ที่ส่ง ÷ เคสที่ปิด" ใน Dashboard (เฟสแรกยังไม่เชื่อมระบบแชต จึงกรอกจากรายงานของระบบแชต/ticket)</div>
       <div className="tablewrap">
@@ -230,17 +298,17 @@ function Closed({ d, run }) {
 
 function Alerts({ d }) {
   const n = d.notifyChannels;
-  const st = (ok) => (ok ? <span className="badge green">เชื่อมแล้ว</span> : <span className="badge">ยังไม่ตั้งค่า</span>);
+  const st = (ok) => (ok ? <span className="st green">เชื่อมแล้ว</span> : <span className="st">ยังไม่ตั้งค่า</span>);
   return (
     <div className="stack">
-      <div className="card pad stack">
+      <div className="panel panel-b stack">
         <h2>ช่องทางแจ้งเตือนคะแนนต่ำ</h2>
         <div className="row">LINE กลุ่มทีม (Messaging API) {st(n.line)}</div>
         <div className="row">อีเมล (Resend) {st(n.email)}</div>
         <div className="row">Webhook (Google Chat / Slack / Discord) {st(n.webhook)}</div>
         <div className="small muted">ตั้งค่าผ่าน Environment Variables บน Vercel: <code>LINE_CHANNEL_ACCESS_TOKEN</code> + <code>LINE_TO</code>, <code>RESEND_API_KEY</code> + <code>MAIL_FROM</code>, <code>ALERT_WEBHOOK_URL</code> · ทุกการแจ้งเตือนถูกบันทึกไว้ด้านล่างเสมอ และแสดงเป็นตัวเลขแดงที่เมนู "ติดตามคะแนนต่ำ"</div>
       </div>
-      <div className="card tablewrap">
+      <div className="panel tablewrap">
         <table className="t">
           <thead><tr><th>เวลา</th><th>ข้อความ</th><th>ผลการส่ง</th></tr></thead>
           <tbody>
@@ -261,7 +329,7 @@ function Alerts({ d }) {
 
 function Audit({ d }) {
   return (
-    <div className="card tablewrap">
+    <div className="panel tablewrap">
       <table className="t">
         <thead><tr><th>เวลา</th><th>ผู้ทำ</th><th>การกระทำ</th><th>รายละเอียด</th></tr></thead>
         <tbody>
@@ -292,8 +360,8 @@ export default function AdminClient({ user }) {
 
   async function run(body, okMsg) {
     try {
-      await api('/api/admin', { method: 'POST', body });
-      say(okMsg);
+      if (body) await api('/api/admin', { method: 'POST', body });
+      if (okMsg) say(okMsg);
       await load();
       return true;
     } catch (e) {
@@ -302,19 +370,19 @@ export default function AdminClient({ user }) {
     }
   }
 
-  if (err) return <div className="alert bad">{err}</div>;
+  if (err) return <div className="note-line bad">{err}</div>;
   if (!d) return <div className="empty">กำลังโหลด…</div>;
   const tabs = isAdmin
-    ? [['users', 'ผู้ใช้และสิทธิ์'], ['products', 'ผลิตภัณฑ์'], ['form', 'คำถามแบบประเมิน'], ['templates', 'เทมเพลตข้อความ'], ['settings', 'เป้าหมาย / ตั้งค่า'], ['closed', 'เคสที่ปิด'], ['alerts', 'การแจ้งเตือน'], ['audit', 'Log การแก้ไข']]
+    ? [['users', 'ทีม'], ['settings', 'เป้าหมาย'], ['form', 'แบบประเมิน'], ['templates', 'ข้อความส่งลูกค้า'], ['products', 'ผลิตภัณฑ์'], ['closed', 'ยอดเคสที่ปิด'], ['alerts', 'การแจ้งเตือน'], ['audit', 'ประวัติการแก้ไข']]
     : [['closed', 'เคสที่ปิด']];
   const P = { users: Users, products: Products, form: Form, templates: Templates, settings: Settings, closed: Closed, alerts: Alerts, audit: Audit }[tab];
   return (
     <div>
-      <div className="pagehead"><h1>{isAdmin ? 'ตั้งค่าระบบ' : 'ข้อมูลเคสที่ปิด'}</h1></div>
+      <div className="pagehead"><h1>{isAdmin ? 'ตั้งค่า' : 'ยอดเคสที่ปิด'}</h1></div>
       {tabs.length > 1 && (
         <div className="tabs">{tabs.map(([k, l]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}</div>
       )}
-      <P d={d} run={run} />
+      <P d={d} run={run} say={say} />
       {toast}
     </div>
   );

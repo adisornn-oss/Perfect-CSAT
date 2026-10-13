@@ -1,10 +1,11 @@
 import { handler, json, body, qs, bad } from '@/lib/http';
 import { requireRole, publicUser, atLeast } from '@/lib/auth';
 import {
-  listUsers, createUser, updateUser, getProducts, saveProduct, getSettings, saveSettings, getTemplates, saveTemplate,
+  listUsers, updateUser, getProducts, saveProduct, getSettings, saveSettings, getTemplates, saveTemplate,
   getForm, saveForm, currentFormVersion, listAudit, getClosedCounts, setClosedCount, DEFAULT_TEMPLATES, CHANNELS, ensureSeed,
+  createUsers, createLoginToken, getUser,
 } from '@/lib/data';
-import { listOutbox, channelsConfigured } from '@/lib/notify';
+import { listOutbox, channelsConfigured, appUrl, sendEmail } from '@/lib/notify';
 import { ym, shiftMonth, monthsBetween } from '@/lib/time';
 
 export const dynamic = 'force-dynamic';
@@ -32,6 +33,8 @@ export const GET = handler(async (req) => {
     audit: await listAudit(200),
     outbox: await listOutbox(50),
     notifyChannels: channelsConfigured(),
+    googleEnabled: Boolean(process.env.GOOGLE_CLIENT_ID),
+    emailEnabled: Boolean(process.env.RESEND_API_KEY),
   });
 });
 
@@ -44,8 +47,23 @@ export const POST = handler(async (req) => {
   }
   const u = await requireRole('admin');
   switch (b.action) {
-    case 'user.create':
-      return json({ user: publicUser(await createUser(u, b)) });
+    case 'users.add': {
+      // paste many emails → accounts + one-click sign-in links (emailed too when email is configured)
+      const { created, skipped } = await createUsers(u, b.emails, b.role || 'agent');
+      const base = appUrl(req);
+      const invites = [];
+      for (const x of created) {
+        const link = `${base}/login/link/${await createLoginToken(x)}`;
+        const mailed = await sendEmail('คุณได้รับสิทธิ์ใช้งาน Perfect CSAT', `สวัสดีครับ/ค่ะ\n\nคุณได้รับสิทธิ์ใช้งาน Perfect CSAT แล้ว กดลิงก์ด้านล่างเพื่อเข้าสู่ระบบได้ทันที (ไม่ต้องตั้งรหัสผ่าน)\n\n${link}\n\nครั้งต่อไปเข้าที่ ${base} แล้วกด "เข้าสู่ระบบด้วย Google"`, [x.email]).catch(() => 'error');
+        invites.push({ email: x.email, link, mailed: mailed === 'sent' });
+      }
+      return json({ invites, skipped });
+    }
+    case 'user.link': {
+      const target = await getUser(b.id);
+      if (!target) return bad('ไม่พบผู้ใช้', 404);
+      return json({ link: `${appUrl(req)}/login/link/${await createLoginToken(target)}` });
+    }
     case 'user.update':
       if (b.id === u.id && (b.role && b.role !== 'admin' || b.active === false)) return bad('ไม่สามารถลดสิทธิ์หรือปิดบัญชีของตัวเองได้');
       return json({ user: publicUser(await updateUser(u, b.id, b)) });

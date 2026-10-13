@@ -1,10 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api, useToast } from '@/components/Shell';
-import { Stars } from '@/app/cases/CasesClient';
 
 const FU = {
-  pending: ['รอติดตาม', 'red'],
+  pending: ['รอติดต่อ', 'red'],
   contacted: ['ติดต่อแล้ว', 'amber'],
   closed: ['ปิดเรื่อง', 'green'],
   cancelled: ['ยกเลิก', ''],
@@ -33,48 +32,46 @@ function Item({ b, users, products, isLead, me, onSaved, focus }) {
   }
 
   return (
-    <div id={c.no} className="card pad stack" style={focus ? { outline: '2px solid var(--brand)' } : undefined}>
+    <div id={c.no} className="panel panel-b stack" style={focus ? { boxShadow: '0 0 0 2px var(--accent)' } : undefined}>
       <div className="spread">
         <div className="row">
           <b className="mono">{c.no}</b>
-          <span className="badge" style={{ color: p?.color }}>{p?.name || c.product}</span>
-          <span className="small muted">{CH[c.channel]} · ผู้ดูแล {c.agentNick}{c.extRef ? ` · อ้างอิง ${c.extRef}` : ''}</span>
+          <span className="small soft">{p?.name || c.product} · {CH[c.channel]} · {c.agentNick}{c.extRef ? ` · ${c.extRef}` : ''}</span>
         </div>
         <div className="row">
-          {overdue && <span className="badge red">⏰ เลยกำหนด 1 วันทำการ</span>}
-          <span className={`badge ${FU[fu.status][1]}`}>{FU[fu.status][0]}</span>
+          {overdue && <span className="tag warn">เลยกำหนด</span>}
+          <span className={`st ${FU[fu.status][1]}`}>{FU[fu.status][0]}</span>
         </div>
       </div>
 
       <div className="row" style={{ alignItems: 'flex-start', gap: 20 }}>
         <div>
-          <Stars n={r?.score} /> <b>{r?.score}/5</b>
-          <div className="small muted">ตอบเมื่อ {fmt(r?.answeredAt)}</div>
+          <div style={{ fontSize: 22, fontWeight: 600, lineHeight: 1 }} className="num">{r?.score}<span className="muted" style={{ fontSize: 13, fontWeight: 400 }}>/5</span></div>
+          <div className="xs muted" style={{ marginTop: 4 }}>{fmt(r?.answeredAt)}</div>
         </div>
         <div className="grow small">
           {r?.final ? (
             <>
-              {r.reasons?.length > 0 && <div>ควรปรับปรุง: <b>{r.reasons.join(', ')}</b></div>}
-              <div>สถานะปัญหา: <b>{RES[r.resolved] || '–'}</b></div>
-              {r.comment && <div style={{ marginTop: 4 }}>“{r.comment}”</div>}
+              {r.comment && <div className="quote" style={{ marginBottom: 4 }}>{r.comment}</div>}
+              <div className="soft">
+                {[r.reasons?.length && r.reasons.join(', '), `ปัญหา${RES[r.resolved] || '—'}`].filter(Boolean).join(' · ')}
+              </div>
             </>
           ) : (
-            <span className="muted">ลูกค้ากดคะแนนแล้ว แต่ยังไม่ได้ส่งรายละเอียด</span>
+            <span className="muted">ลูกค้าให้ดาวแล้ว ยังไม่ได้กรอกรายละเอียด</span>
           )}
         </div>
-        <div className="small" style={{ textAlign: 'right' }}>
-          ต้องติดต่อภายใน
-          <div><b>{fmt(fu.deadline)}</b></div>
-          {fu.contactedAt && <div className="muted">ติดต่อแล้ว {fmt(fu.contactedAt)}</div>}
+        <div className="xs soft" style={{ textAlign: 'right' }}>
+          {fu.contactedAt ? <>ติดต่อแล้ว {fmt(fu.contactedAt)}</> : <>ติดต่อภายใน<div style={{ color: overdue ? 'var(--bad)' : 'var(--ink)', fontSize: 13 }}>{fmt(fu.deadline)}</div></>}
         </div>
       </div>
 
       {fu.notes?.length > 0 && (
         <div>
           {fu.notes.map((n, i) => (
-            <div className="note" key={i}>
+            <div className="log" key={i}>
               {n.text}
-              <div className="muted small">{n.by} · {fmt(n.at)}</div>
+              <div className="xs muted">{n.by} · {fmt(n.at)}</div>
             </div>
           ))}
         </div>
@@ -82,24 +79,24 @@ function Item({ b, users, products, isLead, me, onSaved, focus }) {
 
       {canEdit && fu.status !== 'cancelled' && (
         <div className="stack" style={{ gap: 8 }}>
-          <textarea className="input" rows={2} placeholder="บันทึกสิ่งที่ทำ เช่น โทรคุยกับลูกค้าแล้ว แก้ไขการตั้งค่า sender name ให้…" value={note} onChange={(e) => setNote(e.target.value)} />
+          <textarea className="input" rows={2} placeholder="ทำอะไรไปแล้วบ้าง" value={note} onChange={(e) => setNote(e.target.value)} />
           <div className="spread">
             <div className="row">
               {isLead && (
-                <label className="row small">
+                <label className="row small soft">
                   ผู้รับผิดชอบ
-                  <select className="input" style={{ width: 160 }} value={fu.assigneeId} onChange={(e) => save({ assigneeId: e.target.value })} disabled={busy}>
+                  <select className="input" style={{ width: 150 }} value={fu.assigneeId} onChange={(e) => save({ assigneeId: e.target.value })} disabled={busy}>
                     {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
                   </select>
                 </label>
               )}
-              {!isLead && <span className="small muted">ผู้รับผิดชอบ: {users.find((u) => u.id === fu.assigneeId)?.name}</span>}
+              {!isLead && <span className="xs muted">ผู้รับผิดชอบ: {users.find((u) => u.id === fu.assigneeId)?.name}</span>}
             </div>
             <div className="row">
-              <button className="btn sm" disabled={busy || !note.trim()} onClick={() => save({ note })}>บันทึก</button>
-              {fu.status === 'pending' && <button className="btn sm primary" disabled={busy} onClick={() => save({ status: 'contacted', note })}>ติดต่อลูกค้าแล้ว</button>}
+              <button className="btn sm quiet" disabled={busy || !note.trim()} onClick={() => save({ note })}>บันทึกโน้ต</button>
+              {fu.status === 'pending' && <button className="btn sm primary" disabled={busy} onClick={() => save({ status: 'contacted', note })}>ติดต่อแล้ว</button>}
               {fu.status !== 'closed' && <button className="btn sm" disabled={busy} onClick={() => save({ status: 'closed', note })}>ปิดเรื่อง</button>}
-              {fu.status === 'closed' && <button className="btn sm ghost" disabled={busy} onClick={() => save({ status: 'contacted', note })}>เปิดเรื่องอีกครั้ง</button>}
+              {fu.status === 'closed' && <button className="btn sm quiet" disabled={busy} onClick={() => save({ status: 'contacted', note })}>เปิดเรื่องอีกครั้ง</button>}
             </div>
           </div>
         </div>
@@ -139,7 +136,7 @@ export default function FollowupsClient({ user }) {
     }
   }
 
-  if (err) return <div className="alert bad">{err}</div>;
+  if (err) return <div className="note-line bad">{err}</div>;
   if (!d) return <div className="empty">กำลังโหลด…</div>;
   const counts = { open: 0, pending: 0, contacted: 0, closed: 0, all: d.rows.length };
   d.rows.forEach((b) => {
@@ -153,27 +150,26 @@ export default function FollowupsClient({ user }) {
   return (
     <div>
       <div className="pagehead">
-        <h1>ติดตามคะแนนต่ำ (1–3)</h1>
-        <div className="small muted">
-          ระบบแจ้งเตือนหัวหน้าทีมทันทีที่ลูกค้าให้คะแนน 1–3 · ต้องติดต่อกลับภายใน 1 วันทำการ · เตือนซ้ำอัตโนมัติถ้าเลยกำหนด
-          {!isLead && ' · แสดงเฉพาะเคสของคุณ'}
+        <div>
+          <h1>คะแนนต่ำ</h1>
+          <div className="sub">ลูกค้าที่ให้ 1–3 ดาว ต้องติดต่อกลับภายใน 1 วันทำการ{!isLead && ' · เฉพาะเคสของคุณ'}</div>
         </div>
       </div>
       <div className="tabs">
         {[
           ['open', 'ยังไม่ปิด'],
-          ['pending', 'รอติดตาม'],
+          ['pending', 'รอติดต่อ'],
           ['contacted', 'ติดต่อแล้ว'],
           ['closed', 'ปิดเรื่อง'],
           ['all', 'ทั้งหมด'],
         ].map(([k, l]) => (
           <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>
-            {l} <span className="muted">({counts[k] || 0})</span>
+            {l}<span className="c">{counts[k] || 0}</span>
           </button>
         ))}
       </div>
       {!rows.length ? (
-        <div className="card empty">🎉 ไม่มีเคสคะแนนต่ำในหมวดนี้</div>
+        <div className="panel empty">ไม่มีเคสในหมวดนี้</div>
       ) : (
         <div className="stack">
           {rows.map((b) => (

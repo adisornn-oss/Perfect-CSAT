@@ -4,6 +4,26 @@ import { usePathname } from 'next/navigation';
 
 const ROLE_LABEL = { agent: 'CS Agent', lead: 'CS Lead', admin: 'Admin' };
 
+const I = {
+  link: <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />,
+  chart: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
+  flag: <path d="M4 22V4s1.5-1 5-1 5 2 8 2 3-.5 3-.5v11s-1 .5-3 .5-5-2-8-2-5 1-5 1" />,
+  gear: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+    </>
+  ),
+  table: <path d="M3 5h18v14H3zM3 10h18M9 10v9" />,
+};
+export function Icon({ name }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {I[name]}
+    </svg>
+  );
+}
+
 export function useToast() {
   const [msg, setMsg] = useState('');
   useEffect(() => {
@@ -44,35 +64,32 @@ export async function copyText(text) {
   }
 }
 
-function PasswordModal({ onClose }) {
-  const [cur, setCur] = useState('');
-  const [nw, setNw] = useState('');
-  const [msg, setMsg] = useState('');
+export function Avatar({ user }) {
+  const initial = (user.nickname || user.name || user.email || '?').trim().charAt(0).toUpperCase();
+  return <span className="avatar">{user.picture ? <img src={user.picture} alt="" referrerPolicy="no-referrer" /> : initial}</span>;
+}
+
+function NicknameModal({ user, onClose }) {
+  const [nick, setNick] = useState(user.nickname || '');
+  const [busy, setBusy] = useState(false);
   async function save() {
+    setBusy(true);
     try {
-      await api('/api/me', { method: 'PATCH', body: { currentPassword: cur, newPassword: nw } });
-      setMsg('เปลี่ยนรหัสผ่านแล้ว');
-      setTimeout(onClose, 900);
-    } catch (e) {
-      setMsg(e.message);
+      await api('/api/me', { method: 'PATCH', body: { nickname: nick } });
+      window.location.reload();
+    } finally {
+      setBusy(false);
     }
   }
   return (
     <div className="modal-bg" onClick={onClose}>
-      <div className="modal card pad-lg stack" onClick={(e) => e.stopPropagation()}>
-        <h2>เปลี่ยนรหัสผ่าน</h2>
-        <label className="field">
-          รหัสผ่านปัจจุบัน
-          <input className="input" type="password" value={cur} onChange={(e) => setCur(e.target.value)} />
-        </label>
-        <label className="field">
-          รหัสผ่านใหม่ (อย่างน้อย 8 ตัวอักษร)
-          <input className="input" type="password" value={nw} onChange={(e) => setNw(e.target.value)} />
-        </label>
-        {msg && <div className="alert info">{msg}</div>}
+      <div className="modal stack" onClick={(e) => e.stopPropagation()}>
+        <h2>ชื่อที่ลูกค้าเห็น</h2>
+        <p className="small soft">แสดงในหน้าประเมินและข้อความที่ส่งให้ลูกค้า เช่น “ดูแลโดย {nick || 'เอ'}”</p>
+        <input className="input" value={nick} onChange={(e) => setNick(e.target.value)} maxLength={40} autoFocus />
         <div className="row" style={{ justifyContent: 'flex-end' }}>
-          <button className="btn" onClick={onClose}>ยกเลิก</button>
-          <button className="btn primary" onClick={save} disabled={nw.length < 8}>บันทึก</button>
+          <button className="btn quiet" onClick={onClose}>ยกเลิก</button>
+          <button className="btn primary" onClick={save} disabled={busy || !nick.trim()}>บันทึก</button>
         </div>
       </div>
     </div>
@@ -83,7 +100,7 @@ export default function Shell({ user, children }) {
   const path = usePathname();
   const [pending, setPending] = useState(0);
   const [open, setOpen] = useState(false);
-  const [pw, setPw] = useState(false);
+  const [nick, setNick] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -101,11 +118,12 @@ export default function Shell({ user, children }) {
   }, [path]);
 
   const links = [
-    { href: '/cases', label: 'สร้างลิงก์ / เคส' },
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/followups', label: 'ติดตามคะแนนต่ำ', count: pending },
+    { href: '/cases', label: 'ส่งแบบประเมิน', icon: 'link' },
+    { href: '/dashboard', label: 'ภาพรวม CSAT', icon: 'chart' },
+    { href: '/followups', label: 'คะแนนต่ำ', icon: 'flag', count: pending },
   ];
-  if (user.role !== 'agent') links.push({ href: '/admin', label: user.role === 'admin' ? 'ตั้งค่า' : 'ข้อมูลเคสปิด' });
+  if (user.role === 'admin') links.push({ href: '/admin', label: 'ตั้งค่า', icon: 'gear' });
+  else if (user.role === 'lead') links.push({ href: '/admin', label: 'ยอดเคสที่ปิด', icon: 'table' });
 
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -113,36 +131,44 @@ export default function Shell({ user, children }) {
   }
 
   return (
-    <>
-      <header className="topbar">
-        <div className="topbar-in">
-          <a className="logo" href="/">
-            <img className="logo-mark" src="/brand-mark.jpg" alt="" /> Perfect <b>CSAT</b>
-          </a>
-          <nav className="nav">
-            {links.map((l) => (
-              <a key={l.href} href={l.href} className={path.startsWith(l.href) ? 'on' : ''}>
-                {l.label}
-                {l.count ? <span className="count">{l.count}</span> : null}
-              </a>
-            ))}
-          </nav>
-          <div className="userbox">
-            <button className="btn ghost" onClick={() => setOpen((o) => !o)}>
-              {user.nickname || user.name} <span className="badge">{ROLE_LABEL[user.role]}</span>
-            </button>
-            {open && (
-              <div className="menu" onMouseLeave={() => setOpen(false)}>
-                <div className="small muted" style={{ padding: '6px 10px' }}>{user.email}</div>
-                <button onClick={() => { setPw(true); setOpen(false); }}>เปลี่ยนรหัสผ่าน</button>
-                <button onClick={logout}>ออกจากระบบ</button>
-              </div>
-            )}
-          </div>
+    <div className="app">
+      <aside className="side">
+        <a className="brand" href="/">
+          <img src="/brand-mark.jpg" alt="" />
+          <span>
+            Perfect <em>CSAT</em>
+          </span>
+        </a>
+        <nav className="nav">
+          {links.map((l) => (
+            <a key={l.href} href={l.href} className={path.startsWith(l.href) ? 'on' : ''}>
+              <Icon name={l.icon} />
+              <span className="lbl">{l.label}</span>
+              {l.count ? <span className="count">{l.count}</span> : null}
+            </a>
+          ))}
+        </nav>
+        <div className="side-foot">
+          <button className="me" onClick={() => setOpen((o) => !o)}>
+            <Avatar user={user} />
+            <span className="who">
+              <b>{user.nickname || user.name}</b>
+              <span>{ROLE_LABEL[user.role]}</span>
+            </span>
+          </button>
+          {open && (
+            <div className="menu" onMouseLeave={() => setOpen(false)}>
+              <div className="xs muted" style={{ padding: '6px 10px' }}>{user.email}</div>
+              <button onClick={() => { setNick(true); setOpen(false); }}>แก้ชื่อที่ลูกค้าเห็น</button>
+              <button onClick={logout}>ออกจากระบบ</button>
+            </div>
+          )}
         </div>
-      </header>
-      <main className="page">{children}</main>
-      {pw && <PasswordModal onClose={() => setPw(false)} />}
-    </>
+      </aside>
+      <main className="main">
+        <div className="page">{children}</div>
+      </main>
+      {nick && <NicknameModal user={user} onClose={() => setNick(false)} />}
+    </div>
   );
 }

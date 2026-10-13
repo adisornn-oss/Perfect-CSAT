@@ -14,7 +14,7 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
-export const viewport = { width: 'device-width', initialScale: 1, themeColor: '#d81b72' };
+export const viewport = { width: 'device-width', initialScale: 1, themeColor: '#ffffff', colorScheme: 'light' };
 
 export default function RootLayout({ children }) {
   return (

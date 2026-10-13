@@ -8,12 +8,28 @@ import Survey from './Survey';
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'แบบประเมินความพึงพอใจ', robots: { index: false, follow: false } };
 
+const ICONS = {
+  check: <path d="M20 6 9 17l-5-5" />,
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </>
+  ),
+};
+
 function Shell({ product, children }) {
   return (
     <main className="sv" style={product ? { '--pc': product.color } : undefined}>
-      <div className="sv-card">{children}</div>
+      <div className="sv-wrap">{children}</div>
       <div className="sv-foot">
-        <img src="/brand-mark.jpg" alt="" style={{ mixBlendMode: 'multiply' }} /> ขับเคลื่อนโดย Perfect CSAT
+        <img src="/brand-mark.jpg" alt="" /> ขับเคลื่อนโดย Perfect CSAT
       </div>
     </main>
   );
@@ -21,11 +37,13 @@ function Shell({ product, children }) {
 
 function Head({ product, c }) {
   return (
-    <div className="sv-head">
-      {product?.logo ? <img src={product.logo} alt={product.name} /> : <h2 style={{ color: product?.color }}>{product?.name}</h2>}
+    <div className="sv-top">
+      {product?.logo ? <img src={product.logo} alt={product.name} /> : <b style={{ color: product?.color }}>{product?.name}</b>}
       {c && (
-        <div className="sv-meta">
-          เคส <b className="mono">{c.no}</b> · ดูแลโดย <b>{c.agentNick}</b>
+        <div className="meta">
+          เคส <b className="mono">{c.no}</b>
+          <br />
+          ดูแลโดย <b>{c.agentNick}</b>
         </div>
       )}
     </div>
@@ -34,10 +52,14 @@ function Head({ product, c }) {
 
 function Message({ icon, title, children }) {
   return (
-    <div className="sv-done">
-      <div className="ic">{icon}</div>
-      <h2 style={{ marginTop: 10 }}>{title}</h2>
-      <div className="muted" style={{ marginTop: 8 }}>{children}</div>
+    <div className="sv-msg">
+      <div className="ic">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {ICONS[icon]}
+        </svg>
+      </div>
+      <h2>{title}</h2>
+      <p>{children}</p>
     </div>
   );
 }
@@ -47,7 +69,7 @@ export default async function SurveyPage({ params }) {
   const ip = (h.get('x-forwarded-for') || '').split(',')[0].trim() || 'local';
   const notFound = (
     <Shell>
-      <Message icon="🔍" title="ไม่พบแบบประเมินนี้">กรุณาตรวจสอบลิงก์อีกครั้ง หรือติดต่อทีมซัพพอร์ตที่ส่งลิงก์ให้คุณ</Message>
+      <Message icon="search" title="ไม่พบแบบประเมินนี้">ลิงก์อาจพิมพ์ไม่ครบ ลองเปิดจากข้อความที่ทีมซัพพอร์ตส่งให้อีกครั้ง</Message>
     </Shell>
   );
 
@@ -66,7 +88,7 @@ export default async function SurveyPage({ params }) {
     return (
       <Shell product={product}>
         <Head product={product} c={c} />
-        <Message icon="✅" title="คุณประเมินเคสนี้แล้ว">ขอบคุณสำหรับความคิดเห็น ทีมงานได้รับคำตอบของคุณเรียบร้อยแล้ว</Message>
+        <Message icon="check" title="คุณประเมินเคสนี้แล้ว">ทีมงานได้รับคำตอบของคุณแล้ว ขอบคุณที่สละเวลาค่ะ</Message>
       </Shell>
     );
   }
@@ -74,12 +96,10 @@ export default async function SurveyPage({ params }) {
     return (
       <Shell product={product}>
         <Head product={product} c={c} />
-        <Message icon="⏱️" title="ลิงก์นี้หมดอายุแล้ว">
-          ลิงก์ประเมินใช้ได้ถึง {fmt(c.expiresAt)}
+        <Message icon="clock" title="ลิงก์นี้หมดอายุแล้ว">
+          แบบประเมินเปิดรับถึง {fmt(c.expiresAt)} หากยังมีปัญหาหรืออยากบอกอะไรเรา ติดต่อได้ที่
           <br />
-          หากต้องการแจ้งความเห็นหรือยังมีปัญหา ติดต่อเราได้ที่
-          <br />
-          <b style={{ color: 'var(--ink)' }}>{product?.contact}</b>
+          <b style={{ color: 'var(--ink)', fontWeight: 500 }}>{product?.contact}</b>
         </Message>
       </Shell>
     );
