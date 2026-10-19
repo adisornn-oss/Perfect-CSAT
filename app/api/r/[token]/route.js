@@ -4,6 +4,7 @@ import { caseByToken, saveResponse } from '@/lib/data';
 import { TOKEN_RE, ipOf } from '@/lib/ids';
 import { limited, over } from '@/lib/ratelimit';
 import { alertLowScore } from '@/lib/notify';
+import { notifyAnswered } from '@/lib/integrations';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,5 +29,6 @@ export const POST = handler(async (req, { params }) => {
       console.error('alert failed', e);
     }
   }
+  await notifyAnswered(c, resp);
   return json({ ok: true, score: resp.score, final: resp.final });
 });

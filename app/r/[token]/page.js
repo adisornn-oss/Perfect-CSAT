@@ -70,7 +70,7 @@ function Message({ icon, title, children }) {
   );
 }
 
-export default async function SurveyPage({ params }) {
+export default async function SurveyPage({ params, searchParams }) {
   const h = headers();
   const ip = (h.get('x-forwarded-for') || '').split(',')[0].trim() || 'local';
   const notFound = (
@@ -120,6 +120,7 @@ export default async function SurveyPage({ params }) {
       <Survey
         token={tok}
         initialScore={resp?.score || 0}
+        preset={/^[1-5]$/.test(searchParams?.s || '') ? Number(searchParams.s) : 0}
         form={{
           scoreQuestion: form.scoreQuestion,
           improveQuestion: form.improveQuestion,

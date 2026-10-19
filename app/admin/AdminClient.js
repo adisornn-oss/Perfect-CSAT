@@ -329,6 +329,113 @@ function Alerts({ d }) {
   );
 }
 
+function Bots({ d, run, say }) {
+  const [name, setName] = useState('');
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [fresh, setFresh] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const base = d.appUrl;
+  const sample = d.products.find((p) => p.code === 'TB')?.code || d.products[0]?.code;
+  const curl = `curl -X POST ${base}/api/v1/surveys \\
+  -H "Authorization: Bearer ${fresh?.secret || 'pcs_…'}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"product":"${sample}","channel":"line","extRef":"<LINE userId>","agentEmail":"<อีเมลแอดมินที่ดูแลแชตนี้>"}'`;
+
+  async function create() {
+    setBusy(true);
+    try {
+      const j = await api('/api/admin', { method: 'POST', body: { action: 'apikey.create', name, webhookUrl } });
+      setFresh(j);
+      setName('');
+      setWebhookUrl('');
+      await run(null);
+    } catch (e) {
+      say(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const copy = async (t, m) => (await copyText(t)) && say(m);
+
+  return (
+    <div className="stack" style={{ gap: 20 }}>
+      <div className="note-line">
+        ให้บอทหรือระบบแชตสร้างแบบประเมินเองเมื่อปิดเคส — ระบบออกเลขเคส ส่งการ์ดให้ดาวกลับไปให้บอทส่งในแชต ลูกค้าแตะดาวในแชตแล้วคะแนนถูกบันทึกทันที คำตอบเข้าแดชบอร์ดและแจ้งเตือนคะแนนต่ำเหมือนเคสที่ส่งเอง
+      </div>
+
+      {fresh && (
+        <div className="panel panel-b stack" style={{ gap: 10, boxShadow: '0 0 0 2px var(--accent)' }}>
+          <h2>คีย์ของ “{fresh.key.name}”</h2>
+          <div className="small soft">คัดลอกเก็บไว้ตอนนี้ ระบบจะไม่แสดงคีย์นี้อีก ถ้าหายให้สร้างใหม่แล้วปิดคีย์เดิม</div>
+          <div className="copybox mono">{fresh.secret}</div>
+          {fresh.key.webhookSecret && (
+            <div className="small">Webhook secret (ใช้ตรวจลายเซ็น <code>X-PerfectCSAT-Signature</code>): <span className="mono">{fresh.key.webhookSecret}</span></div>
+          )}
+          <div className="row">
+            <button className="btn primary" onClick={() => copy(fresh.secret, 'คัดลอกคีย์แล้ว')}>คัดลอกคีย์</button>
+            <button className="btn quiet" onClick={() => setFresh(null)}>เก็บแล้ว ซ่อน</button>
+          </div>
+        </div>
+      )}
+
+      <div className="panel panel-b stack" style={{ gap: 10 }}>
+        <h2>เชื่อมบอทใหม่</h2>
+        <div className="row" style={{ alignItems: 'flex-end', gap: 10 }}>
+          <label className="field" style={{ flex: 1 }}>ชื่อบอท<input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="เช่น Thunder Bot — LINE OA ซัพพอร์ต" maxLength={60} /></label>
+          <label className="field" style={{ flex: 1.4 }}>Webhook เมื่อลูกค้าตอบ <span className="hint">ไม่บังคับ</span><input className="input" value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} placeholder="https://bot.example.com/csat-callback" /></label>
+          <button className="btn primary" disabled={!name.trim() || busy} onClick={create}>สร้างคีย์</button>
+        </div>
+      </div>
+
+      <div className="panel tablewrap">
+        <table className="t">
+          <thead><tr><th>บอท</th><th>คีย์</th><th>Webhook</th><th>ใช้ล่าสุด</th><th>สถานะ</th><th /></tr></thead>
+          <tbody>
+            {!d.apiKeys.length && <tr><td colSpan={6} className="empty">ยังไม่มีบอทที่เชื่อมต่อ</td></tr>}
+            {d.apiKeys.map((k) => (
+              <tr key={k.id}>
+                <td>{k.name}<div className="xs muted">สร้างโดย {k.createdBy} · {fmt(k.createdAt)}</div></td>
+                <td className="mono small">{k.prefix}…</td>
+                <td className="small soft" style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>{k.webhookUrl || '—'}</td>
+                <td className="small soft">{fmt(k.lastUsedAt) || 'ยังไม่เคยใช้'}</td>
+                <td>{k.active ? <span className="st green">ใช้งาน</span> : <span className="st">ปิดแล้ว</span>}</td>
+                <td className="r">
+                  {k.active && (
+                    <button className="btn sm quiet" onClick={() => window.confirm(`ปิดคีย์ของ ${k.name}? บอทจะสร้างแบบประเมินไม่ได้ทันที`) && run({ action: 'apikey.update', id: k.id, active: false }, 'ปิดคีย์แล้ว')}>ปิดคีย์</button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="panel panel-b stack" style={{ gap: 12 }}>
+        <div className="spread">
+          <h2>ให้ทีมที่ทำบอทเอาไปใช้</h2>
+          <button className="btn sm" onClick={() => copy(curl, 'คัดลอกตัวอย่างแล้ว')}>คัดลอกตัวอย่าง</button>
+        </div>
+        <div className="copybox mono xs" style={{ whiteSpace: 'pre-wrap' }}>{curl}</div>
+        <table className="t small">
+          <tbody>
+            <tr><td className="mono" style={{ whiteSpace: 'nowrap' }}>product</td><td>รหัสหรือชื่อ: {d.products.map((p) => p.code).join(', ')}</td></tr>
+            <tr><td className="mono">channel</td><td>line · messenger · email · sms · phone (ไม่ใส่ = line)</td></tr>
+            <tr><td className="mono">extRef</td><td>ID ของแชต/ลูกค้าในระบบบอท ใช้ค้นย้อนหลังและส่งกลับใน webhook</td></tr>
+            <tr><td className="mono">agentEmail</td><td>อีเมลคนที่ดูแลแชตนั้น — ถ้าตรงกับคนในทีม CSAT จะนับเป็นของคนนั้น ถ้าไม่ใส่นับเป็นของบอท</td></tr>
+          </tbody>
+        </table>
+        <div className="small soft" style={{ lineHeight: 1.8 }}>
+          ผลลัพธ์ที่ได้กลับมา: <code>line</code> = การ์ด Flex พร้อมปุ่ม 5 ดาว ส่งผ่าน LINE Messaging API ได้ทันที ·{' '}
+          <code>ratingLinks</code> = ลิงก์แยกแต่ละดาว ใช้ทำปุ่ม/quick reply ในแพลตฟอร์มอื่น · <code>message</code> = ข้อความตามเทมเพลต
+          <br />
+          ดูผลภายหลัง: <code>GET /api/v1/surveys/&#123;caseNo&#125;</code> หรือ <code>GET /api/v1/surveys?extRef=…</code> · ถ้าตั้ง webhook
+          ระบบจะ POST <code>survey.scored</code> (แตะดาว) และ <code>survey.completed</code> (กดส่ง) ไปให้บอท
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Audit({ d }) {
   return (
     <div className="panel tablewrap">
@@ -375,9 +482,9 @@ export default function AdminClient({ user }) {
   if (err) return <div className="note-line bad">{err}</div>;
   if (!d) return <div className="empty">กำลังโหลด…</div>;
   const tabs = isAdmin
-    ? [['users', 'ทีม'], ['settings', 'เป้าหมาย'], ['form', 'แบบประเมิน'], ['templates', 'ข้อความส่งลูกค้า'], ['products', 'ผลิตภัณฑ์'], ['closed', 'ยอดเคสที่ปิด'], ['alerts', 'การแจ้งเตือน'], ['audit', 'ประวัติการแก้ไข']]
+    ? [['users', 'ทีม'], ['settings', 'เป้าหมาย'], ['form', 'แบบประเมิน'], ['templates', 'ข้อความส่งลูกค้า'], ['products', 'ผลิตภัณฑ์'], ['closed', 'ยอดเคสที่ปิด'], ['alerts', 'การแจ้งเตือน'], ['bots', 'เชื่อมต่อบอท'], ['audit', 'ประวัติการแก้ไข']]
     : [['closed', 'เคสที่ปิด']];
-  const P = { users: Users, products: Products, form: Form, templates: Templates, settings: Settings, closed: Closed, alerts: Alerts, audit: Audit }[tab];
+  const P = { users: Users, products: Products, form: Form, templates: Templates, settings: Settings, closed: Closed, alerts: Alerts, bots: Bots, audit: Audit }[tab];
   return (
     <div>
       <div className="pagehead"><h1>{isAdmin ? 'ตั้งค่า' : 'ยอดเคสที่ปิด'}</h1></div>

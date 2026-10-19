@@ -7,6 +7,7 @@ import {
 } from '@/lib/data';
 import { listOutbox, channelsConfigured, appUrl, sendEmail } from '@/lib/notify';
 import { ym, shiftMonth, monthsBetween } from '@/lib/time';
+import { createApiKey, listApiKeys, updateApiKey } from '@/lib/integrations';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +36,8 @@ export const GET = handler(async (req) => {
     notifyChannels: channelsConfigured(),
     googleEnabled: Boolean(process.env.GOOGLE_CLIENT_ID),
     emailEnabled: Boolean(process.env.RESEND_API_KEY),
+    apiKeys: await listApiKeys(),
+    appUrl: appUrl(req),
   });
 });
 
@@ -73,6 +76,10 @@ export const POST = handler(async (req) => {
       return json({ settings: await saveSettings(u, b) });
     case 'template.save':
       return json({ templates: await saveTemplate(u, b.key, b.text) });
+    case 'apikey.create':
+      return json(await createApiKey(u, b));
+    case 'apikey.update':
+      return json({ key: await updateApiKey(u, b.id, b) });
     case 'form.save':
       return json({ form: await saveForm(u, b) });
     default:

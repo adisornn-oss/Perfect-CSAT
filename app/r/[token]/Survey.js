@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const STAR = (
   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -24,8 +24,8 @@ function Done({ title, children, icon = 'check' }) {
   );
 }
 
-export default function Survey({ token, initialScore, form, labels, resolvedOptions, commentMax, privacyUrl, contact }) {
-  const [score, setScore] = useState(initialScore);
+export default function Survey({ token, initialScore, preset, form, labels, resolvedOptions, commentMax, privacyUrl, contact }) {
+  const [score, setScore] = useState(preset || initialScore);
   const [reasons, setReasons] = useState([]);
   const [resolved, setResolved] = useState('');
   const [comment, setComment] = useState('');
@@ -60,6 +60,14 @@ export default function Survey({ token, initialScore, form, labels, resolvedOpti
       setError(e.message);
     }
   }
+
+  // star tapped inside the chat (…?s=4): save it right away, then drop it from the URL
+  useEffect(() => {
+    if (!preset) return;
+    if (preset !== initialScore) pick(preset);
+    window.history.replaceState(null, '', window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function submit() {
     if (!resolved) return setError('ช่วยตอบอีกข้อว่าปัญหาได้รับการแก้ไขแล้วหรือยัง');
