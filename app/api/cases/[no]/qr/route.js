@@ -4,7 +4,8 @@ import { requireRole } from '@/lib/auth';
 import { getCase } from '@/lib/data';
 import { surveyUrl } from '@/lib/message';
 
-export async function GET(req, { params }) {
+export async function GET(req, ctx) {
+  const params = await ctx.params;
   try {
     const u = await requireRole('agent');
     const c = await getCase(decodeURIComponent(params.no).toUpperCase());

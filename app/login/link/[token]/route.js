@@ -6,7 +6,8 @@ import { appUrl } from '@/lib/notify';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req, { params }) {
+export async function GET(req, ctx) {
+  const params = await ctx.params;
   const u = await consumeLoginToken(params.token);
   if (!u) return NextResponse.redirect(new URL('/login?e=link', appUrl(req)));
   await touchLogin(u);

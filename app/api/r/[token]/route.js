@@ -8,7 +8,8 @@ import { notifyAnswered } from '@/lib/integrations';
 
 export const dynamic = 'force-dynamic';
 
-export const POST = handler(async (req, { params }) => {
+export const POST = handler(async (req, ctx) => {
+  const params = await ctx.params;
   const ip = ipOf(req);
   if ((await over('rmiss', ip, 20, 3600)) || (await limited('rsubmit', ip, 30, 600)))
     return bad('ส่งคำตอบบ่อยเกินไป กรุณารอสักครู่', 429);

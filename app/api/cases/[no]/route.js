@@ -5,7 +5,8 @@ import { messageFor } from '@/lib/message';
 
 export const dynamic = 'force-dynamic';
 
-export const GET = handler(async (req, { params }) => {
+export const GET = handler(async (req, ctx) => {
+  const params = await ctx.params;
   const u = await requireRole('agent');
   const b = await getBundle(decodeURIComponent(params.no).toUpperCase());
   if (!b || (u.role === 'agent' && b.case.agentId !== u.id)) throw Object.assign(new Error('ไม่พบเคส'), { status: 404 });

@@ -5,7 +5,8 @@ import { shape } from '../shape';
 
 export const dynamic = 'force-dynamic';
 
-export const GET = handler(async (req, { params }) => {
+export const GET = handler(async (req, ctx) => {
+  const params = await ctx.params;
   const k = await requireKey(req);
   const b = await getBundle(String(params.no).toUpperCase());
   // a key only sees the cases it created

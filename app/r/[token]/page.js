@@ -70,8 +70,10 @@ function Message({ icon, title, children }) {
   );
 }
 
-export default async function SurveyPage({ params, searchParams }) {
-  const h = headers();
+export default async function SurveyPage(props) {
+  const params = await props.params;
+  const searchParams = await props.searchParams;
+  const h = await headers();
   const ip = (h.get('x-forwarded-for') || '').split(',')[0].trim() || 'local';
   const notFound = (
     <Shell>

@@ -14,7 +14,8 @@ const ERR = {
   link: 'ลิงก์นี้ถูกใช้ไปแล้วหรือหมดอายุ ขอลิงก์ใหม่จาก Admin หรือเข้าด้วย Google',
 };
 
-export default async function Login({ searchParams }) {
+export default async function Login(props) {
+  const searchParams = await props.searchParams;
   await ensureSeed();
   if (await currentUser()) redirect('/');
   return (

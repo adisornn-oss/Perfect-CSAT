@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 module.exports = {
   reactStrictMode: true,
-  eslint: { ignoreDuringBuilds: true },
   poweredByHeader: false,
   async headers() {
     return [

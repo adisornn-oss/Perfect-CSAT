@@ -9,5 +9,7 @@ export function GET() {
     store: usingRedis ? 'redis' : 'file',
     sessionSecret: Boolean(process.env.SESSION_SECRET),
     bootstrapAdmin: Boolean(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD),
+    cronSecret: Boolean(process.env.CRON_SECRET),
+    appUrl: Boolean(process.env.APP_URL),
   });
 }
